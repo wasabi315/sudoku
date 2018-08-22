@@ -9,13 +9,15 @@
 -}
 module Sudoku where
 
-import           Data.Char             ( digitToInt, intToDigit )
+import           Data.Char             ( digitToInt, intToDigit, isDigit )
 import           Data.Foldable         ( foldr' )
 import           Data.IntMap.Strict    ( IntMap, (!) )
 import qualified Data.IntMap.Strict    as IM
 import           Data.List             ( (\\), sort, intersperse )
 import           Data.Set              ( Set )
 import qualified Data.Set              as Set
+import           Text.Parsec
+import           Text.Parsec.String
 
 -- Types ----------------------------------------------------------------------
 
@@ -42,7 +44,7 @@ type Board = IntMap (Set Coord)
 
 -- | Generate sudoku Board from String data
 -- TODO: refactor this
-toBoard :: [Int] -> Board
+toBoard :: String -> Board
 toBoard ns = foldr' f empty $ toBoard' 0 ns where
     empty
         = IM.singleton 0 (Set.fromList [ Coord r c s | r <- [0..8], c <- [0..8], let s = toSqr r c ])
@@ -51,12 +53,12 @@ toBoard ns = foldr' f empty $ toBoard' 0 ns where
     toSqr r c = 3 * (r `div` 3) + (c `div` 3)
     toBoard' _ []      = []
     toBoard' i (n:ns)  =
-        if n == 0
+        if n == '0'
         then toBoard' (i + 1) ns
         else
             let (r, c) = i `divMod` 9
                 s      = toSqr r c
-            in  (n, Coord r c s) : toBoard' (i + 1) ns
+            in  (digitToInt n, Coord r c s) : toBoard' (i + 1) ns
 
 -- | Generate ascii art of sudoku board form Board data
 -- e.g.)
@@ -189,4 +191,19 @@ wrong b = IM.foldr ((||) . dup) False (IM.delete 0 b)
 dup :: Set Coord -> Bool
 {-# INLINE dup #-}
 dup cs = not $ Set.foldr' ((&&) . (\c -> c `sieve` Set.delete c cs)) True cs
+
+
+-- Parser ---------------------------------------------------------------------
+
+sudoku :: Parser String
+sudoku = do
+    x <- count 81 cell
+    eof
+    return x
+
+cell :: Parser Char
+cell = skipMany (noneOf ['0'..'9']) *> digit <* skipMany (noneOf ['0'..'9'])
+
+parseSudokuFromFile :: FilePath -> IO (Either ParseError String)
+parseSudokuFromFile = parseFromFile sudoku
 

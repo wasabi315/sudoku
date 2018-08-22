@@ -1,29 +1,20 @@
 module Main where
 
-import Data.Char ( isDigit, digitToInt)
-import Text.CSV
+import Data.Char   ( digitToInt )
+import Data.Either
 
 import Sudoku
 
 main :: IO ()
 main = do
-    csv <- parseCSVFromFile "./sudoku.csv"
-    case csv of
-        Left _ -> putStrLn "illegal format"
-        Right b -> do
-            let b' = concat . concat $ b
-            if validate b'
-                then putStrLn "illegal format"
-                else do
-                    let target = toBoard . map digitToInt $ b'
-                    putStrLn "target:"
-                    printBoard target
-                    putStrLn "solutions:"
-                    mapM_ printBoard $ solver target
+    str <- parseSudokuFromFile "./sudoku.csv"
+    either print execSolver str
 
-validate :: String -> Bool
-validate str
-    | not $ all isDigit str = True
-    | length str /= 81      = True
-    | otherwise             = False
+execSolver :: String -> IO ()
+execSolver str = do
+    let b = toBoard str
+    putStrLn "target:"
+    printBoard b
+    putStrLn "solutions:"
+    mapM_ printBoard $ solver b
 
