@@ -1,9 +1,9 @@
 module Main where
 
-import Data.Char   ( digitToInt )
-import Data.Either
+import           Data.Char   ( digitToInt )
+import           Data.Either ( either )
 
-import Sudoku
+import           Sudoku
 
 main :: IO ()
 main = do
