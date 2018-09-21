@@ -108,27 +108,22 @@ printBoard = putStrLn . showBoard
 
 -- | Fill the cell at 'c' with 'n'
 fill :: Int -> Coord -> Board -> Board
-{-# INLINE fill #-}
 fill n c b = IM.adjust (Set.insert c) n (IM.adjust (Set.delete c) 0 b)
 
 -- |
 notMemberOn :: (Coord -> Int) -> Coord -> Set Coord -> Bool
-{-# INLINE notMemberOn #-}
 notMemberOn f c cs = f c `Set.notMember` Set.map f cs
 
 -- |
 sieve :: Coord -> Set Coord -> Bool
-{-# INLINE sieve #-}
 sieve c cs = foldr ((&&) . (\f -> notMemberOn f c cs)) True [row, col, sqr]
 
 -- |
 independent :: Coord -> Set Coord -> Bool
-{-# INLINE independent #-}
 independent c cs = foldr ((||) . (\f -> notMemberOn f c cs)) False [row, col, sqr]
 
 -- |
 independents :: Set Coord -> Set Coord
-{-# INLINE independents #-}
 independents cs = Set.filter (\c -> independent c (Set.delete c cs)) cs
 
 -- |
@@ -184,12 +179,10 @@ solver b
 
 -- |
 wrong :: Board -> Bool
-{-# INLINE wrong #-}
 wrong b = IM.foldr ((||) . dup) False (IM.delete 0 b)
 
 -- |
 dup :: Set Coord -> Bool
-{-# INLINE dup #-}
 dup cs = not $ Set.foldr' ((&&) . (\c -> c `sieve` Set.delete c cs)) True cs
 
 
