@@ -19,8 +19,6 @@ import           Data.List.Split       ( chunksOf )
 import           Data.Monoid
 import           Data.Set              ( Set )
 import qualified Data.Set              as Set
-import           Text.Parsec
-import           Text.Parsec.String
 
 -- Types ----------------------------------------------------------------------
 
@@ -46,8 +44,10 @@ data Pos = Pos
 type Board = IntMap (Set Pos)
 
 -- | Generate sudoku Board from String data
-toBoard :: String -> Board
-toBoard = foldr' f empty . zip allPos
+toBoard :: String -> Maybe Board
+toBoard s
+    | length s == 81 = Just . foldr' f empty . zip allPos $ s
+    | otherwise      = Nothing
   where
     empty = IM.fromList [ (n, Set.empty) | n <- [0..9] ]
     toSqr r c = 3 * div r 3 + div c 3
@@ -140,19 +140,4 @@ wrong b = getAny $ foldMap (Any . dup) (IM.delete 0 b)
 -- |
 dup :: Set Pos -> Bool
 dup cs = not $ getAll $ foldMap (All . (\c -> c `sieve` Set.delete c cs)) cs
-
-
--- Parser ---------------------------------------------------------------------
-
-sudoku :: Parser String
-sudoku = do
-    x <- count 81 cell
-    eof
-    return x
-
-cell :: Parser Char
-cell = skipMany (noneOf ['0'..'9']) *> digit <* skipMany (noneOf ['0'..'9'])
-
-parseSudokuFromFile :: FilePath -> IO (Either ParseError String)
-parseSudokuFromFile = parseFromFile sudoku
 
