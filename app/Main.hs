@@ -11,10 +11,5 @@ main = do
     either print execSolver str
 
 execSolver :: String -> IO ()
-execSolver str = do
-    let b = toBoard str
-    putStrLn "target:"
-    printBoard b
-    putStrLn "solutions:"
-    mapM_ printBoard $ solver b
+execSolver = mapM_ printBoard . solver . toBoard
 

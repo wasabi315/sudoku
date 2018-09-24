@@ -54,39 +54,10 @@ toBoard = foldr' f empty . zip allPos
     allPos = [ Pos r c s | r <- [0..8], c <- [0..8], let s = toSqr r c ]
     f (p, n) = IM.adjust (Set.insert p) (digitToInt n)
 
--- | Generate ascii art of sudoku board form Board data
--- e.g.)
---
---         +---+---+---+---+---+---+---+---+---+
---         |   |   |   |   |   |   |   |   |   |
---         +---+---+---+---+---+---+---+---+---+
---         |   |   |   |   |   |   |   | 2 | 7 |
---         +---+---+---+---+---+---+---+---+---+
---         | 4 |   |   | 6 |   | 8 |   |   |   |
---         +---+---+---+---+---+---+---+---+---+
---         |   | 7 | 1 |   |   |   | 3 |   |   |
---         +---+---+---+---+---+---+---+---+---+
---         | 2 | 3 | 8 | 5 |   | 6 | 4 | 1 | 9 |
---         +---+---+---+---+---+---+---+---+---+
---         | 9 | 6 | 4 | 1 |   |   | 7 | 5 |   |
---         +---+---+---+---+---+---+---+---+---+
---         | 3 | 9 | 5 |   | 2 | 7 | 8 |   |   |
---         +---+---+---+---+---+---+---+---+---+
---         | 1 | 8 | 2 |   | 6 |   | 9 | 7 | 4 |
---         +---+---+---+---+---+---+---+---+---+
---         |   | 4 | 6 | 8 | 1 | 9 | 2 |   | 5 |
---         +---+---+---+---+---+---+---+---+---+
---
---
+-- |
 showBoard :: Board -> String
-showBoard = format . toList
+showBoard = map intToDigit . toList
   where
-    format            = unlines . intersperse' rule . map fmtRow . chunksOf 9
-    fmtRow            = intersperse ' ' . intersperse' '|' . map showCell
-    showCell 0        = ' '
-    showCell n        = intToDigit n
-    rule              = "+---+---+---+---+---+---+---+---+---+"
-    intersperse' x xs = [x] ++ intersperse x xs ++ [x]
     toList            = map snd . sort . concatMap f . IM.toList
     f (i, xs)         = map (,i) (Set.toList xs)
 
