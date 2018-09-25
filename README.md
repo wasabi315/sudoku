@@ -1,5 +1,7 @@
 # The Sudoku Solver
 
+9x9 sudoku solver using backtracking
+
 ## Usage
 
 ```

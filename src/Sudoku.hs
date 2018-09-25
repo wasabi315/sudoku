@@ -67,7 +67,8 @@ sieve :: Pos -> [Pos] -> Bool
 sieve p = getAll . foldMap (All . (#! p))
 
 independent :: Pos -> [Pos] -> Bool
-independent p ps = getAny $ foldMap (\f -> Any $ notMemberOn f p ps) [row, col, sqr]
+independent p ps =
+    getAny $ foldMap (\f -> Any $ notMemberOn f p ps) [row, col, sqr]
 
 independents :: [Pos] -> [Pos]
 independents ps = filter (\p -> independent p (delete p ps)) ps
@@ -98,8 +99,8 @@ solver b
     | wrong b'      = []
     | null (b' ! 0) = [b']
     | otherwise     = concatMap solver $ assumptions b'
-    where
-        b' = determineAll b
+  where
+    b' = determineAll b
 
 wrong :: Board -> Bool
 wrong b = getAny $ foldMap (Any . dup) (IM.delete 0 b)
