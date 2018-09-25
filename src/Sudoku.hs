@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-
--- |
+--
 -- Module     : Sudoku
 -- Maintainer : wasabi315
 -- License    : MIT
@@ -10,56 +10,43 @@
 -}
 module Sudoku where
 
-import           Data.Char             ( digitToInt, intToDigit, isDigit )
-import           Data.Foldable         ( foldr' )
+import           Data.Char             ( digitToInt, intToDigit )
 import           Data.IntMap.Strict    ( IntMap, (!) )
 import qualified Data.IntMap.Strict    as IM
-import           Data.List             ( (\\), sort, intersperse )
-import           Data.List.Split       ( chunksOf )
-import           Data.Monoid
-import           Data.Set              ( Set )
-import qualified Data.Set              as Set
+import           Data.List             ( sort, delete )
+import           Data.Monoid           ( All(..), Any(..) )
 
 -- Types ----------------------------------------------------------------------
 
--- | Coordinate of sudoku board
--- 'sqr' is the index that points 3x3 square shown as below
---
---    +---+---+---+
---    | 0 | 1 | 2 |
---    +---+---+---+
---    | 3 | 4 | 5 |
---    +---+---+---+
---    | 6 | 7 | 8 |
---    +---+---+---+
---
+
 data Pos = Pos
     { row :: Int
     , col :: Int
     , sqr :: Int
     } deriving (Eq, Show, Ord)
 
--- | Each key represents 1-9, blank (= 0) and
---   each value is a set of coordinates of the grid filled with the key value
-type Board = IntMap (Set Pos)
 
--- | Generate sudoku Board from String data
+type Board = IntMap [Pos]
+
+
 toBoard :: String -> Maybe Board
 toBoard s
-    | length s == 81 = Just . foldr' f empty . zip allPos $ s
+    | length s == 81 = Just . foldr f empty . zip allPos $ s
     | otherwise      = Nothing
   where
-    empty = IM.fromList [ (n, Set.empty) | n <- [0..9] ]
+    empty = IM.fromList [ (n, []) | n <- [0..9] ]
     toSqr r c = 3 * div r 3 + div c 3
     allPos = [ Pos r c s | r <- [0..8], c <- [0..8], let s = toSqr r c ]
-    f (p, n) = IM.adjust (Set.insert p) (digitToInt n)
+    f (p, n) = IM.adjust (p:) (readVal n)
+    readVal '.' = 0
+    readVal n   = digitToInt n
 
--- |
+
 showBoard :: Board -> String
 showBoard = map intToDigit . toList
   where
     toList            = map snd . sort . concatMap f . IM.toList
-    f (i, xs)         = map (,i) (Set.toList xs)
+    f (i, xs)         = map (,i) xs
 
 printBoard :: Board -> IO ()
 printBoard = putStrLn . showBoard
@@ -67,77 +54,82 @@ printBoard = putStrLn . showBoard
 
 -- Solver ---------------------------------------------------------------------
 
--- |
+(#!) :: Pos -> Pos -> Bool
+Pos r1 c1 s1 #! Pos r2 c2 s2
+    =  r1 /= r2
+    && c1 /= c2
+    && s1 /= s2
+
+
 assign :: Int -> Pos -> Board -> Board
-assign n c = IM.adjust (Set.insert c) n . IM.adjust (Set.delete c) 0
+assign n p = IM.adjust (p:) n . IM.adjust (delete p) 0
 
--- |
-notMemberOn :: (Pos -> Int) -> Pos -> Set Pos -> Bool
-notMemberOn f c cs = f c `Set.notMember` Set.map f cs
 
--- |
-sieve :: Pos -> Set Pos -> Bool
-sieve c cs = getAll $ foldMap (\f -> All $ notMemberOn f c cs) [row, col, sqr]
+notMemberOn :: (Pos -> Int) -> Pos -> [Pos] -> Bool
+notMemberOn f p ps = f p `notElem` map f ps
 
--- |
-independent :: Pos -> Set Pos -> Bool
-independent c cs = getAny $ foldMap (\f -> Any $ notMemberOn f c cs) [row, col, sqr]
 
--- |
-independents :: Set Pos -> Set Pos
-independents cs = Set.filter (\c -> independent c (Set.delete c cs)) cs
+sieve :: Pos -> [Pos] -> Bool
+sieve p = getAll . foldMap (All . (#! p))
 
--- |
+
+independent :: Pos -> [Pos] -> Bool
+independent p ps = getAny $ foldMap (\f -> Any $ notMemberOn f p ps) [row, col, sqr]
+
+
+independents :: [Pos] -> [Pos]
+independents ps = filter (\p -> independent p (delete p ps)) ps
+
+
 determineBy :: Int -> Board -> Board
 determineBy n b =
-    Set.foldr' (assign n) b $ independents $ Set.filter (`sieve` (b ! n)) (b ! 0)
+    foldr (assign n) b $ independents $ filter (`sieve` (b ! n)) (b ! 0)
 
--- |
+
 determine :: Board -> Board
-determine b = foldr' determineBy b [1..9]
+determine b = foldr determineBy b [1..9]
 
--- |
+
 determineAll :: Board -> Board
-determineAll b = loop (determine b) b where
-    loop x y
-        | x == y     = y
-        | otherwise = loop (determine x) x
+determineAll b =
+    let b' = determine b
+    in  if b == b' then b else determineAll b'
 
--- |
+
 candidatesAt :: Pos -> Board -> [Int]
-candidatesAt c b = [ n | n <- [1..9], sieve c (b ! n) ]
+candidatesAt p b = [ n | n <- [1..9], sieve p (b ! n) ]
 
--- |
+
 candidates :: Board -> [[Int]]
-candidates b = map (`candidatesAt` b) $ Set.toAscList (b ! 0)
+candidates b = map (`candidatesAt` b) (b ! 0)
 
--- |
+
 minIndex :: [Int] -> Int
 minIndex = snd . minimum . (`zip` [0..])
 
--- |
+
 assumptions :: Board -> [Board]
 assumptions b =
     let css  = candidates b
         i    = minIndex $ map length css
         cand = css !! i
-        co   = Set.elemAt i (b ! 0)
+        co   = (b ! 0) !! i
     in [ assign n co b | n <- cand ]
 
--- |
+
 solver :: Board -> [Board]
 solver b
-    | wrong b'          = []
-    | Set.null (b' ! 0) = [b']
-    | otherwise         = concatMap solver $ assumptions b'
+    | wrong b'      = []
+    | null (b' ! 0) = [b']
+    | otherwise     = concatMap solver $ assumptions b'
     where
         b' = determineAll b
 
--- |
+
 wrong :: Board -> Bool
 wrong b = getAny $ foldMap (Any . dup) (IM.delete 0 b)
 
--- |
-dup :: Set Pos -> Bool
-dup cs = not $ getAll $ foldMap (All . (\c -> c `sieve` Set.delete c cs)) cs
+
+dup :: [Pos] -> Bool
+dup ps = getAny $ foldMap (Any . not . (\p -> p `sieve` delete p ps)) ps
 
