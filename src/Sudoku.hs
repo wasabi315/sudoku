@@ -29,7 +29,7 @@ data Pos = Pos
 
 type Board = IntMap [Pos]
 
--------------------------------------------------------------------------------
+-- Utils ----------------------------------------------------------------------
 
 allPos :: [Pos]
 allPos = do
@@ -106,9 +106,9 @@ assumptions b = map (\c -> assign c p b) cs
 
 solver :: Board -> [Board]
 solver b
-    | wrong b'      = []
-    | null (b' ! 0) = [b']
-    | otherwise     = concatMap solver $ assumptions b'
+    | wrong b'    = []
+    | isSolved b' = [b']
+    | otherwise   = concatMap solver $ assumptions b'
   where
     b' = determineAll b
 
@@ -117,4 +117,7 @@ wrong b = getAny $ foldMap (Any . dup) (IM.delete 0 b)
 
 dup :: [Pos] -> Bool
 dup ps = getAny $ foldMap (Any . not . (\p -> p `sieve` delete p ps)) ps
+
+isSolved :: Board -> Bool
+isSolved b = null (b ! 0)
 
