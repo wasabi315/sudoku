@@ -51,10 +51,9 @@ toBoard s
     f b (p, c) = (\n -> IM.adjust (p:) n b) <$> readVal c
 
 showBoard :: Board -> String
-showBoard = map intToDigit . toList
+showBoard = map snd . sort . concatMap f . IM.toList
   where
-    toList            = map snd . sort . concatMap f . IM.toList
-    f (i, xs)         = map (,i) xs
+    f (i, xs) = map (,intToDigit i) xs
 
 printBoard :: Board -> IO ()
 printBoard = putStrLn . showBoard
@@ -92,18 +91,18 @@ determine :: Board -> Board
 determine b = foldr determineBy b [1..9]
 
 determineAll :: Board -> Board
-determineAll b =
-    let b' = determine b
-    in  if b == b' then b else determineAll b'
+determineAll b = if b == b' then b else determineAll b'
+  where
+    b' = determine b
 
 candidatesAt :: Pos -> Board -> [Int]
 candidatesAt p b = [ n | n <- [1..9], sieve p (b ! n) ]
 
 assumptions :: Board -> [Board]
-assumptions b =
-    let ps      = map (\p -> (p, candidatesAt p b)) (b ! 0)
-        (p, cs) = minimumBy (comparing (length . snd)) ps
-    in  map (\c -> assign c p b) cs
+assumptions b = map (\c -> assign c p b) cs
+  where
+    ps      = map (\p -> (p, candidatesAt p b)) (b ! 0)
+    (p, cs) = minimumBy (comparing (length . snd)) ps
 
 solver :: Board -> [Board]
 solver b
