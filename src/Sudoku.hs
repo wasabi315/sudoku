@@ -10,7 +10,9 @@
 -}
 module Sudoku where
 
-import           Data.Char             ( digitToInt, intToDigit )
+import           Control.Monad         ( foldM )
+import           Data.Char             ( digitToInt, intToDigit, isDigit )
+import           Data.Function         ( on )
 import           Data.IntMap.Strict    ( IntMap, (!) )
 import qualified Data.IntMap.Strict    as IM
 import           Data.List             ( sort, delete, minimumBy )
@@ -20,24 +22,33 @@ import           Data.Ord              ( comparing )
 -- Types ----------------------------------------------------------------------
 
 data Pos = Pos
-    { row :: Int
-    , col :: Int
-    , sqr :: Int
-    } deriving (Eq, Show, Ord)
+    { row :: {-# UNPACK #-} !Int
+    , col :: {-# UNPACK #-} !Int
+    , sqr :: {-# UNPACK #-} !Int
+    } deriving (Eq, Ord)
 
 type Board = IntMap [Pos]
 
+-------------------------------------------------------------------------------
+
+allPos :: [Pos]
+allPos = do
+    r <- [0..8]
+    c <- [0..8]
+    let s = 3 * (r `div` 3) + (c `div` 3)
+    return $! Pos r c s
+
+readVal :: Char -> Maybe Int
+readVal '.' = return $! 0
+readVal c   = if isDigit c then return $! digitToInt c else Nothing
+
 toBoard :: String -> Maybe Board
 toBoard s
-    | length s == 81 = Just . foldr f empty . zip allPos $ s
+    | length s == 81 = foldM f empty . zip allPos $ s
     | otherwise      = Nothing
   where
-    empty = IM.fromList [ (n, []) | n <- [0..9] ]
-    toSqr r c = 3 * div r 3 + div c 3
-    allPos = [ Pos r c s | r <- [0..8], c <- [0..8], let s = toSqr r c ]
-    f (p, n) = IM.adjust (p:) (readVal n)
-    readVal '.' = 0
-    readVal n   = digitToInt n
+    empty = IM.fromList $! map (, []) [0..9]
+    f b (p, c) = (\n -> IM.adjust (p:) n b) <$> readVal c
 
 showBoard :: Board -> String
 showBoard = map intToDigit . toList
@@ -61,7 +72,7 @@ assign :: Int -> Pos -> Board -> Board
 assign n p = IM.adjust (p:) n . IM.adjust (delete p) 0
 
 notMemberOn :: (Pos -> Int) -> Pos -> [Pos] -> Bool
-notMemberOn f p ps = f p `notElem` map f ps
+notMemberOn f p = not . any (((==) `on` f) p)
 
 sieve :: Pos -> [Pos] -> Bool
 sieve p = getAll . foldMap (All . (#! p))
