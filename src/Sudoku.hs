@@ -16,8 +16,7 @@ import           Data.Char             ( digitToInt, intToDigit, isDigit )
 import           Data.Function         ( on )
 import           Data.IntMap.Strict    ( IntMap, (!) )
 import qualified Data.IntMap.Strict    as IM
-import           Data.List             ( sort, delete, minimumBy, partition )
-import           Data.Monoid           ( All(..), Any(..) )
+import           Data.List
 import           Data.Ord              ( comparing )
 
 -- Types ----------------------------------------------------------------------
@@ -66,7 +65,7 @@ assign :: Int -> Pos -> Board -> Board
 assign n p = IM.adjust (p:) n . IM.adjust (delete p) 0
 
 sieve :: Pos -> [Pos] -> Bool
-sieve (Pos r1 c1 s1) = getAll . foldMap (All . pred)
+sieve (Pos r1 c1 s1) = all pred
   where
     pred (Pos r2 c2 s2)
         =  r1 /= r2
@@ -121,10 +120,10 @@ solver b
     b' = determineAll b
 
 wrong :: Board -> Bool
-wrong b = getAny $ foldMap (Any . dup) (IM.delete 0 b)
+wrong b = any dup (IM.delete 0 b)
 
 dup :: [Pos] -> Bool
-dup ps = getAny $ foldMap (Any . pred) ps
+dup ps = any pred ps
   where
     pred p = not $ sieve p (delete p ps)
 
