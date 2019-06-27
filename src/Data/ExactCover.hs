@@ -15,9 +15,9 @@ module Data.ExactCover where
 
 import           Control.Monad
 import           Data.Foldable
-import           Data.Function
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
+import           Data.Ord
 
 -------------------------------------------------------------------------------
 -- TYPES
@@ -29,14 +29,11 @@ type Matrix = IM.IntMap Column
 -- ALGORITHM
 
 minSizeCol :: Matrix -> Maybe Column
-minSizeCol = IM.foldr f Nothing
+minSizeCol m
+    | IS.size c == 0 = Nothing
+    | otherwise      = pure c
   where
-    f :: Column -> Maybe Column -> Maybe Column
-    f c Nothing = pure c
-    f c1 (Just c2)
-        | IS.size c1 == 0         = Nothing
-        | IS.size c1 < IS.size c2 = Just c1
-        | otherwise               = Just c2
+    c = minimumBy (comparing IS.size) m
 
 
 delete :: Int -> Matrix -> Matrix
