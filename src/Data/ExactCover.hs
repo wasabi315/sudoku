@@ -37,20 +37,18 @@ minSizeCol m
 
 
 delete :: Int -> Matrix -> Matrix
-delete r m =
-    let (t, f) = IM.partition (IS.member r) m
-        !s     = fold t
-    in  IM.map (`IS.difference` s) f
+delete r m = IM.map (`IS.difference` s) f
+  where
+    (t, f) = IM.partition (IS.member r) m
+    !s     = fold t
 
 
 algX :: Matrix -> [IS.IntSet]
 algX m
     | IM.null m = [IS.empty]
-    | otherwise = case mc of
+    | otherwise = case minSizeCol m of
         Nothing -> []
         Just is -> do
             r <- IS.toAscList is
             IS.insert r <$> algX (delete r m)
-  where
-    mc = minSizeCol m
 
