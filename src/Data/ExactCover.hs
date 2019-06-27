@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 -------------------------------------------------------------------------------
 -- |
 -- Module      : Data.ExactCover
@@ -40,7 +38,7 @@ delete :: Int -> Matrix -> Matrix
 delete r m = IM.map (`IS.difference` s) f
   where
     (t, f) = IM.partition (IS.member r) m
-    !s     = fold t
+    s      = fold t
 
 
 algX :: Matrix -> [IS.IntSet]
@@ -48,7 +46,7 @@ algX m
     | IM.null m = [IS.empty]
     | otherwise = case minSizeCol m of
         Nothing -> []
-        Just is -> do
-            r <- IS.toAscList is
+        Just rs -> do
+            r <- IS.toAscList rs
             IS.insert r <$> algX (delete r m)
 
