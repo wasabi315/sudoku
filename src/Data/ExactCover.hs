@@ -30,8 +30,8 @@ type Matrix = IM.IntMap Column
 
 minSizeCol :: Matrix -> Maybe Column
 minSizeCol m
-    | IS.size c == 0 = Nothing
-    | otherwise      = pure c
+    | IS.null c = Nothing
+    | otherwise = pure c
   where
     c = minimumBy (comparing IS.size) m
 
