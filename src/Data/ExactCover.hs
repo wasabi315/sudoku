@@ -51,3 +51,13 @@ algX m = case minSizeCol m of
         r <- IS.toAscList rs
         IS.insert r <$> algX (delete r m)
 
+-------------------------------------------------------------------------------
+
+toMatrix :: [[Int]] -> Matrix
+toMatrix = foldr phi (const IM.empty) [(0 :: Int) ..]
+  where
+    phi _ _ []       = IM.empty
+    phi r k (cs:css) = foldr psi (k css) cs
+      where
+        psi = IM.alter (pure . maybe (IS.singleton r) (IS.insert r))
+
