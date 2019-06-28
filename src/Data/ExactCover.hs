@@ -1,3 +1,5 @@
+{-# LANGUAGE ViewPatterns #-}
+
 -------------------------------------------------------------------------------
 -- |
 -- Module      : Data.ExactCover
@@ -42,11 +44,10 @@ delete r m = IM.map (`IS.difference` s) f
 
 
 algX :: Matrix -> [IS.IntSet]
-algX m
-    | IM.null m = [IS.empty]
-    | otherwise = case minSizeCol m of
-        Nothing -> []
-        Just rs -> do
-            r <- IS.toAscList rs
-            IS.insert r <$> algX (delete r m)
+algX (IM.null -> True) = [IS.empty]
+algX m = case minSizeCol m of
+    Nothing -> []
+    Just rs -> do
+        r <- IS.toAscList rs
+        IS.insert r <$> algX (delete r m)
 
