@@ -13,8 +13,10 @@
 
 module Data.ExactCover where
 
+import           Control.Applicative
 import           Control.Monad
 import           Data.Foldable
+import           Data.Function
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
 import           Data.Ord
@@ -36,11 +38,11 @@ minSizeCol m
     c = minimumBy (comparing IS.size) m
 
 
-delete :: Int -> Matrix -> Matrix
-delete r m = IM.map (`IS.difference` s) f
+delete :: Matrix -> Int -> Matrix
+delete m r = IM.map (`IS.difference` s) f
   where
     (t, f) = IM.partition (IS.member r) m
-    s      = fold t
+    s      = IS.unions t
 
 
 algX :: Matrix -> [IS.IntSet]
@@ -49,7 +51,7 @@ algX m = case minSizeCol m of
     Nothing -> []
     Just rs -> do
         r <- IS.toAscList rs
-        IS.insert r <$> algX (delete r m)
+        IS.insert r <$> algX (delete m r)
 
 -------------------------------------------------------------------------------
 
@@ -59,5 +61,5 @@ toMatrix = foldr phi (const IM.empty) [(0 :: Int) ..]
     phi _ _ []       = IM.empty
     phi r k (cs:css) = foldr psi (k css) cs
       where
-        psi = IM.alter (pure . maybe (IS.singleton r) (IS.insert r))
+        psi = IM.alter (Just . maybe (IS.singleton r) (IS.insert r))
 
