@@ -4,7 +4,7 @@
 
 ## 🚀 Usage
 
-This program reads the flattend sudoku problem from STDIN and writes flattend solution to STDOUT.
+This program reads the flattened sudoku problem from STDIN and writes flattened solution to STDOUT.
 
 e.g.)
 ```sh
