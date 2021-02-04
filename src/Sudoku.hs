@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -------------------------------------------------------------------------------
@@ -14,16 +15,10 @@
 module Sudoku where
 
 import           Data.Char
-import qualified Data.IntSet as IS
+import qualified Data.IntSet         as IS
 
 import           Data.ExactCover
 import           Data.Foldable.Extra
-
--------------------------------------------------------------------------------
--- UTIL
-
-force :: a -> a
-force x = x `seq` x
 
 -------------------------------------------------------------------------------
 -- CONSTANT
@@ -33,15 +28,16 @@ sudokuConstraint = toMatrix $ map cstr [0 .. 728]
   where
     cstr :: Int -> [Int]
     cstr x =
-        [ force i
-        , force $ 9 * r + n + 81
-        , force $ 9 * c + n + 162
-        , force $ 9 * b + n + 243
-        ]
-      where
-        (i, n) = x `divMod` 9
-        (r, c) = i `divMod` 9
-        b = 3 * (r `div` 3) + (c `div` 3)
+        let
+            (i, n) = x `divMod` 9
+            (r, c) = i `divMod` 9
+            b = 3 * (r `div` 3) + (c `div` 3)
+            !cstr1 = i
+            !cstr2 = 9 * r + n + 81
+            !cstr3 = 9 * c + n + 162
+            !cstr4 = 9 * b + n + 243
+        in
+            [cstr1, cstr2, cstr3, cstr4]
 
 -------------------------------------------------------------------------------
 -- PROCESSING
@@ -68,4 +64,3 @@ solveSudoku = maybe [] solve . readSudoku
         = map (showSudoku . IS.union is)
         . algX
         $ IS.foldl' shrink sudokuConstraint is
-
