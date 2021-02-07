@@ -46,7 +46,7 @@ shrink m r =
 
 algX :: Matrix -> [IS.IntSet]
 algX m = case (IM.null m, minSizeCol m) of
-    (True, _) -> []
+    (True, _) -> [IS.empty]
     (_, !rs) -> do
         r <- IS.toAscList rs
         IS.insert r <$> algX (shrink m r)
