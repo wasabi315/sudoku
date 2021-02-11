@@ -18,6 +18,5 @@ ifoldr
     -> b
     -> t a
     -> b
-ifoldr f b ta = foldr (\a k -> \i -> f i a (k $! i + 1)) (const b) ta 0
+ifoldr f b ta = foldr (\a k i -> f i a (k $! i + 1)) (const b) ta 0
 {-# INLINE ifoldr #-}
-

@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -------------------------------------------------------------------------------
 -- |
@@ -43,16 +42,18 @@ sudokuConstraint = toMatrix $ map cstr [0 .. 728]
 -- PROCESSING
 
 readSudoku :: String -> Maybe IS.IntSet
-readSudoku str@(length -> 81) = Just . IS.fromAscList $ ifoldr phi [] str
-  where
-    phi i c xs = if isDigit c && c > '0'
-        then (9 * i + digitToInt c - 1) : xs
-        else xs
-readSudoku _ = Nothing
+readSudoku str
+    | length str == 81 = Just (ifoldr phi IS.empty str)
+    | otherwise        = Nothing
+    where
+        phi i c s =
+            if isDigit c && c > '0'
+                then IS.insert (9*i + digitToInt c - 1) s
+                else s
 
 
 showSudoku :: IS.IntSet -> String
-showSudoku = map (\i -> intToDigit $! i `mod` 9 + 1) . IS.toAscList
+showSudoku = map (\i -> intToDigit (i `mod` 9 + 1)) . IS.toAscList
 
 -------------------------------------------------------------------------------
 -- MAIN
