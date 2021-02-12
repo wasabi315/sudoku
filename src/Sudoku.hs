@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StrictData #-}
@@ -6,7 +8,10 @@ module Sudoku where
 
 import Control.Monad.ST
 import Data.Char
+import Data.Foldable
 import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Monoid
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
@@ -38,6 +43,7 @@ data ConstraintKind
 
 data Constraint
     = Constraint ConstraintKind {-# UNPACK #-} Word8 {-# UNPACK #-} Word8
+    deriving (Eq, Ord)
 
 instance Show Constraint where
     showsPrec _ (Constraint kind n m) =
@@ -57,10 +63,35 @@ instance Show Constraint where
                 BoxNum ->
                     ('B', '#')
 
-readSudoku :: String -> Maybe (Map (Set Constraint) Cell)
-readSudoku _ =
-    Nothing
+sudokuConstraints :: Map Cell (Set Constraint)
+sudokuConstraints =
+    Map.fromDistinctAscList do
+        row <- [0 .. 8]
+        col <- [0 .. 8]
+        num <- [0 .. 8]
+        let !box = 3 * (row `div` 3) + (col `div` 3)
+            !cell = Cell row col num
+            !constraints =
+                Set.fromDistinctAscList
+                    [ Constraint RowCol row col
+                    , Constraint RowNum row num
+                    , Constraint ColNum col num
+                    , Constraint BoxNum box num
+                    ]
+        pure (cell, constraints)
 
-solveSudoku :: Map (Set Constraint) Cell -> Maybe String
+readSudoku :: String -> Maybe (Map Cell (Set Constraint))
+readSudoku s
+    | length s /= 81 = Nothing
+    | otherwise =
+        let allPos = map (`divMod` 9) [0 .. 80]
+            p =
+                not . getAny . fold do
+                    ((r, c), d) <- filter ((/= '.') . snd) $ zip allPos s
+                    let !n = fromIntegral (digitToInt d) - 1
+                    pure \Cell{..} -> Any (row == r && col == c && num /= n)
+         in Just $ Map.filterWithKey (const . p) sudokuConstraints
+
+solveSudoku :: Map Cell (Set Constraint) -> Maybe String
 solveSudoku c =
-    map (chr . fromIntegral . num) . Set.toAscList <$> runST (solve c)
+    map (intToDigit . fromIntegral . num) . Set.toAscList <$> runST (solve c)
