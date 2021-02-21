@@ -2,7 +2,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,10 +10,10 @@ module Sudoku where
 
 import Control.Monad
 import Data.Char
-import Data.Foldable
+import Data.Foldable.Ext
+import Data.Function
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Monoid
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
@@ -83,27 +82,31 @@ sudokuConstraints =
     pure (cell, constraints)
 
 readSudoku :: String -> Maybe (Map Cell (Set Constraint))
-readSudoku s =
+readSudoku str =
   do
-    guard $ length s == 81
-    digits <- flip filterM (zip allPos s) \(_, c) ->
-      if
-          | not (isAllowedChar c) -> Nothing
-          | c == '.' -> Just False
-          | otherwise -> Just True
+    guard $ length str == 81
 
-    let isExcluded =
-          getAny . fold do
-            ((r, c), d) <- digits
-            let !n = fromIntegral (digitToInt d) - 1
-            pure $ Any . \Cell {..} -> row == r && col == c && num /= n
+    let allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
-    pure $ Map.filterWithKey (const . not . isExcluded) sudokuConstraints
-  where
-    allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
+        -- ".123456789" ('.' for empty cell)
+        isAllowedChar c = c == '.' || (isDigit c && c > '0')
 
-    -- ".123456789" ('.' for empty cell)
-    isAllowedChar c = c == '.' || (isDigit c && c > '0')
+    excludedCells <-
+      zip allPos str
+        & foldMapM \case
+          ((row, col), char)
+            | not (isAllowedChar char) -> Nothing
+            | char == '.' -> Just Set.empty
+            | otherwise ->
+              Just
+                $! Set.fromDistinctAscList
+                  [ Cell row col num
+                    | let !n = fromIntegral (digitToInt char - 1),
+                      num <- [0 .. 8],
+                      num /= n
+                  ]
+
+    pure $ Map.withoutKeys sudokuConstraints excludedCells
 
 solveSudoku :: Map Cell (Set Constraint) -> Maybe String
 solveSudoku c =
