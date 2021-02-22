@@ -11,4 +11,4 @@ main :: IO ()
 main =
   do
     ps <- lines <$> getContents
-    for_ ps $ (Sudoku.parse >=> Sudoku.solve) >>> traverse_ putStrLn
+    for_ ps $ traverse_ putStrLn <<< Sudoku.solve <=< Sudoku.parse
