@@ -61,25 +61,25 @@ instance Show Constraint where
           ColNum -> ('C', '#')
           BoxNum -> ('B', '#')
 
-sudokuConstraints :: Map Cell (Set Constraint)
-sudokuConstraints =
+constraints :: Map Cell (Set Constraint)
+constraints =
   Map.fromDistinctAscList do
     row <- [0 .. 8]
     col <- [0 .. 8]
     num <- [0 .. 8]
     let !box = 3 * (row `div` 3) + (col `div` 3)
         !cell = Cell row col num
-        !constraints =
+        !constraintsOfCell =
           Set.fromDistinctAscList
             [ Constraint RowCol row col,
               Constraint RowNum row num,
               Constraint ColNum col num,
               Constraint BoxNum box num
             ]
-    pure (cell, constraints)
+    pure (cell, constraintsOfCell)
 
-readSudoku :: String -> Maybe (Map Cell (Set Constraint))
-readSudoku str =
+parse :: String -> Maybe (Map Cell (Set Constraint))
+parse str =
   do
     guard $ length str == 81
     excludedCells <-
@@ -100,13 +100,13 @@ readSudoku str =
                     ++
                 )
         & fmap (Set.fromDistinctAscList . flip appEndo [])
-    pure $! sudokuConstraints `Map.withoutKeys` excludedCells
+    pure $! constraints `Map.withoutKeys` excludedCells
   where
     allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
     -- ".123456789" ('.' for empty cell)
     isAllowedChar c = c == '.' || (isDigit c && c > '0')
 
-solveSudoku :: Map Cell (Set Constraint) -> Maybe String
-solveSudoku c =
+solve :: Map Cell (Set Constraint) -> Maybe String
+solve c =
   map (intToDigit . fromIntegral . num) . Set.toAscList <$> EC.solve c

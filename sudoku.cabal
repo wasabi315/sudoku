@@ -24,10 +24,10 @@ source-repository head
 
 library
   exposed-modules:
-      Data.Foldable.Ext
       Math.ExactCover
       Sudoku
   other-modules:
+      Data.Foldable.Ext
       Paths_sudoku
   hs-source-dirs:
       src
