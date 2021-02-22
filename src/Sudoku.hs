@@ -20,6 +20,9 @@ import Data.Set qualified as Set
 import Data.Word
 import Math.ExactCover qualified as EC
 
+-- Solving Sudoku is an exact cover problem
+newtype Sudoku = Sudoku (Map Cell (Set Constraint))
+
 data Cell = Cell
   { row :: {-# UNPACK #-} Word8,
     col :: {-# UNPACK #-} Word8,
@@ -78,7 +81,7 @@ constraints =
             ]
     pure (cell, constraintsOfCell)
 
-parse :: String -> Maybe (Map Cell (Set Constraint))
+parse :: String -> Maybe Sudoku
 parse str =
   do
     guard $ length str == 81
@@ -100,13 +103,15 @@ parse str =
                     ++
                 )
         & fmap (Set.fromDistinctAscList . flip appEndo [])
-    pure $! constraints `Map.withoutKeys` excludedCells
+    pure . Sudoku $! constraints `Map.withoutKeys` excludedCells
   where
     allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
     -- ".123456789" ('.' for empty cell)
     isAllowedChar c = c == '.' || (isDigit c && c > '0')
 
-solve :: Map Cell (Set Constraint) -> Maybe String
-solve c =
-  map (intToDigit . fromIntegral . num) . Set.toAscList <$> EC.solve c
+solve :: Sudoku -> Maybe String
+solve (Sudoku cstr) =
+  cstr
+    & EC.solve
+    & fmap (map (intToDigit . fromIntegral . num) . Set.toAscList)
