@@ -14,6 +14,7 @@ import Data.Foldable.Ext
 import Data.Function
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Monoid
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
@@ -55,14 +56,10 @@ instance Show Constraint where
     where
       (l1, l2) =
         case kind of
-          RowCol ->
-            ('R', 'C')
-          RowNum ->
-            ('R', '#')
-          ColNum ->
-            ('C', '#')
-          BoxNum ->
-            ('B', '#')
+          RowCol -> ('R', 'C')
+          RowNum -> ('R', '#')
+          ColNum -> ('C', '#')
+          BoxNum -> ('B', '#')
 
 sudokuConstraints :: Map Cell (Set Constraint)
 sudokuConstraints =
@@ -85,28 +82,30 @@ readSudoku :: String -> Maybe (Map Cell (Set Constraint))
 readSudoku str =
   do
     guard $ length str == 81
-
-    let allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
-
-        -- ".123456789" ('.' for empty cell)
-        isAllowedChar c = c == '.' || (isDigit c && c > '0')
-
     excludedCells <-
-      zip allPos str
+      str
+        & zip allPos
         & foldMapM \case
           ((row, col), char)
             | not (isAllowedChar char) -> Nothing
-            | char == '.' -> Just Set.empty
+            | char == '.' -> Just mempty
             | otherwise ->
-              Just
-                $! Set.fromDistinctAscList
-                  [ Cell row col num
+              Just . Endo $
+                ( [ cell
                     | let !n = fromIntegral (digitToInt char - 1),
                       num <- [0 .. 8],
-                      num /= n
+                      num /= n,
+                      let !cell = Cell row col num
                   ]
+                    ++
+                )
+        & fmap (Set.fromDistinctAscList . flip appEndo [])
+    pure $! sudokuConstraints `Map.withoutKeys` excludedCells
+  where
+    allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
-    pure $ Map.withoutKeys sudokuConstraints excludedCells
+    -- ".123456789" ('.' for empty cell)
+    isAllowedChar c = c == '.' || (isDigit c && c > '0')
 
 solveSudoku :: Map Cell (Set Constraint) -> Maybe String
 solveSudoku c =
