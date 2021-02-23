@@ -8,7 +8,15 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Sudoku where
+module Sudoku
+  ( Sudoku,
+    Builder,
+    toSudoku,
+    place,
+    parse,
+    solve,
+  )
+where
 
 import Control.Monad
 import Data.Char
@@ -87,9 +95,9 @@ constraints =
 newtype Builder = Builder (Endo [Cell])
   deriving newtype (Semigroup, Monoid)
 
--- fill cell (row, col) with num
-fixed :: Word8 -> Word8 -> Word8 -> Builder
-fixed row col num =
+-- place num on (row, col)
+place :: Word8 -> Word8 -> Word8 -> Builder
+place row col num =
   Builder . Endo $
     ( [ cell
         | num' <- [0 .. 8],
@@ -99,8 +107,8 @@ fixed row col num =
         ++
     )
 
-build :: Builder -> Sudoku
-build (Builder builder) =
+toSudoku :: Builder -> Sudoku
+toSudoku (Builder builder) =
   Sudoku $
     Map.withoutKeys
       constraints
@@ -117,8 +125,9 @@ parse str =
           ((row, col), char)
             | not (isAllowedChar char) -> Nothing
             | char == '.' -> Just mempty
-            | otherwise -> Just (fixed row col $! fromIntegral (digitToInt char - 1))
-    pure $! build builder
+            | otherwise ->
+              Just (place row col $! fromIntegral (digitToInt char - 1))
+    pure $! toSudoku builder
   where
     allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
