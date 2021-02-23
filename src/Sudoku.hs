@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -81,29 +83,40 @@ constraints =
             ]
     pure (cell, constraintsOfCell)
 
+newtype Builder = Builder (Endo [Cell])
+  deriving newtype (Semigroup, Monoid)
+
+fixed :: Word8 -> Word8 -> Word8 -> Builder
+fixed row col num =
+  Builder . Endo $
+    ( [ cell
+        | num' <- [0 .. 8],
+          num /= num',
+          let !cell = Cell row col num'
+      ]
+        ++
+    )
+
+build :: Builder -> Sudoku
+build (Builder builder) =
+  Sudoku $
+    Map.withoutKeys
+      constraints
+      (Set.fromDistinctAscList (appEndo builder []))
+
 parse :: String -> Maybe Sudoku
 parse str =
   do
     guard $ length str == 81
-    excludedCells <-
+    builder <-
       str
         & zip allPos
         & foldMapM \case
           ((row, col), char)
             | not (isAllowedChar char) -> Nothing
             | char == '.' -> Just mempty
-            | otherwise ->
-              Just . Endo $
-                ( [ cell
-                    | let !n = fromIntegral (digitToInt char - 1),
-                      num <- [0 .. 8],
-                      num /= n,
-                      let !cell = Cell row col num
-                  ]
-                    ++
-                )
-        & fmap (Set.fromDistinctAscList . flip appEndo [])
-    pure . Sudoku $! constraints `Map.withoutKeys` excludedCells
+            | otherwise -> Just (fixed row col $! fromIntegral (digitToInt char - 1))
+    pure $! build builder
   where
     allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
