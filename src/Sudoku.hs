@@ -72,7 +72,7 @@ constraints =
     row <- [0 .. 8]
     col <- [0 .. 8]
     num <- [0 .. 8]
-    let !box = 3 * (row `div` 3) + (col `div` 3)
+    let box = 3 * (row `div` 3) + (col `div` 3)
         !cell = Cell row col num
         !constraintsOfCell =
           Set.fromDistinctAscList
