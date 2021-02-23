@@ -83,9 +83,11 @@ constraints =
             ]
     pure (cell, constraintsOfCell)
 
+-- `mempty` for problem with no cell filled
 newtype Builder = Builder (Endo [Cell])
   deriving newtype (Semigroup, Monoid)
 
+-- fill cell (row, col) with num
 fixed :: Word8 -> Word8 -> Word8 -> Builder
 fixed row col num =
   Builder . Endo $
