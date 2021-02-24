@@ -10,9 +10,6 @@
 
 module Sudoku
   ( Sudoku,
-    Builder,
-    toSudoku,
-    place,
     parse,
     solve,
   )
@@ -92,13 +89,15 @@ constraints =
     pure (cell, constraintsOfCell)
 
 -- `mempty` for problem with no cell filled
-newtype Builder = Builder (Endo [Cell])
+newtype ParseHelper = ParseHelper (Endo [Cell])
   deriving newtype (Semigroup, Monoid)
 
 -- place num on (row, col)
-place :: Word8 -> Word8 -> Word8 -> Builder
+-- do not place on the same position
+-- must place in accending order of the position
+place :: Word8 -> Word8 -> Word8 -> ParseHelper
 place row col num =
-  Builder . Endo $
+  ParseHelper . Endo $
     ( [ cell
         | num' <- [0 .. 8],
           num /= num',
@@ -107,12 +106,12 @@ place row col num =
         ++
     )
 
-toSudoku :: Builder -> Sudoku
-toSudoku (Builder builder) =
+toSudoku :: ParseHelper -> Sudoku
+toSudoku (ParseHelper builder) =
   Sudoku $
     Map.withoutKeys
       constraints
-      (Set.fromDistinctAscList (appEndo builder []))
+      (Set.fromDistinctAscList $ appEndo builder [])
 
 parse :: String -> Maybe Sudoku
 parse str =
