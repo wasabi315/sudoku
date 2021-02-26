@@ -10,6 +10,9 @@
 
 module Sudoku
   ( Sudoku,
+    Builder,
+    runBuilder,
+    place,
     parse,
     solve,
   )
@@ -21,7 +24,6 @@ import Data.Foldable.Ext
 import Data.Function
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Monoid
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
@@ -88,30 +90,31 @@ constraints =
             ]
     pure (cell, constraintsOfCell)
 
+newtype DistPosCell = DistPosCell Cell
+
+instance Eq DistPosCell where
+  DistPosCell (Cell r1 c1 _) == DistPosCell (Cell r2 c2 _) =
+    r1 == r2 && c1 == c2
+
+instance Ord DistPosCell where
+  DistPosCell (Cell r1 c1 _) `compare` DistPosCell (Cell r2 c2 _) =
+    r1 `compare` r2 <> c1 `compare` c2
+
 -- `mempty` for problem with no cell filled
-newtype ParseHelper = ParseHelper (Endo [Cell])
+newtype Builder = Builder (Set DistPosCell)
   deriving newtype (Semigroup, Monoid)
 
 -- place num on (row, col)
--- do not place on the same position
--- must place in accending order of the position
-place :: Word8 -> Word8 -> Word8 -> ParseHelper
+place :: Word8 -> Word8 -> Word8 -> Builder
 place row col num =
-  ParseHelper . Endo $
-    ( [ cell
-        | num' <- [0 .. 8],
-          num /= num',
-          let !cell = Cell row col num'
-      ]
-        ++
-    )
+  Builder . Set.singleton . DistPosCell $! Cell row col num
 
-toSudoku :: ParseHelper -> Sudoku
-toSudoku (ParseHelper builder) =
-  Sudoku $
-    Map.withoutKeys
-      constraints
-      (Set.fromDistinctAscList $ appEndo builder [])
+runBuilder :: Builder -> Sudoku
+runBuilder (Builder builder) =
+  Sudoku . Map.withoutKeys constraints . Set.fromDistinctAscList $ do
+    DistPosCell (Cell row col num) <- Set.toAscList builder
+    num' <- filter (/= num) [0 .. 8]
+    pure $! Cell row col num'
 
 parse :: String -> Maybe Sudoku
 parse str =
@@ -126,7 +129,7 @@ parse str =
             | char == '.' -> Just mempty
             | otherwise ->
               Just (place row col $! fromIntegral (digitToInt char - 1))
-    pure $! toSudoku builder
+    pure $! runBuilder builder
   where
     allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
 
