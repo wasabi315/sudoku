@@ -21,7 +21,7 @@ library
       Math.ExactCover
       Sudoku
   other-modules:
-      Data.Foldable.Ext
+      Control.Monad.Ext
       Paths_sudoku
   hs-source-dirs:
       src

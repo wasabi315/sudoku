@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,8 +20,8 @@ module Sudoku
 where
 
 import Control.Monad
+import Control.Monad.Ext
 import Data.Char
-import Data.Foldable.Ext
 import Data.Function
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -121,14 +122,16 @@ parse str =
   do
     guard $ length str == 81
     builder <-
-      str
-        & zip allPos
-        & foldMapM \case
-          ((row, col), char)
-            | not (isAllowedChar char) -> Nothing
-            | char == '.' -> Just mempty
-            | otherwise ->
-              Just (place row col $! fromIntegral (digitToInt char - 1))
+      foldZipWithM
+        ( \(row, col) char ->
+            if
+                | not (isAllowedChar char) -> Nothing
+                | char == '.' -> Just mempty
+                | otherwise ->
+                  Just (place row col $! fromIntegral (digitToInt char - 1))
+        )
+        allPos
+        str
     pure $! runBuilder builder
   where
     allPos = (,) <$> [0 .. 8] <*> [0 .. 8]
